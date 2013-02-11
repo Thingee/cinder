@@ -50,7 +50,7 @@ def _translate_snapshot_summary_view(context, snapshot):
 
     d['id'] = snapshot['id']
     d['created_at'] = snapshot['created_at']
-    d['display_name'] = snapshot['display_name']
+    d['name'] = snapshot['display_name']
     d['display_description'] = snapshot['display_description']
     d['volume_id'] = snapshot['volume_id']
     d['status'] = snapshot['status']
@@ -64,7 +64,7 @@ def make_snapshot(elem):
     elem.set('status')
     elem.set('size')
     elem.set('created_at')
-    elem.set('display_name')
+    elem.set('name')
     elem.set('display_description')
     elem.set('volume_id')
 
@@ -134,9 +134,14 @@ class SnapshotsController(wsgi.Controller):
 
         search_opts = {}
         search_opts.update(req.GET)
-        allowed_search_options = ('status', 'volume_id', 'display_name')
+        allowed_search_options = ('status', 'volume_id', 'name')
         volumes.remove_invalid_options(context, search_opts,
                                        allowed_search_options)
+
+        # NOTE(thingee): v2 API allows name instead of display_name
+        if 'name' in search_opts:
+            search_opts['display_name'] = search_opts['name']
+            del search_opts['name']
 
         snapshots = self.volume_api.get_all_snapshots(context,
                                                       search_opts=search_opts)
@@ -158,6 +163,11 @@ class SnapshotsController(wsgi.Controller):
         force = snapshot.get('force', False)
         msg = _("Create snapshot from volume %s")
         LOG.audit(msg, volume_id, context=context)
+
+        # NOTE(thingee): v2 API allows name instead of display_name
+        if 'name' in snapshot:
+            snapshot['display_name'] = snapshot.get('name')
+            del snapshot['name']
 
         if not utils.is_valid_boolstr(force):
             msg = _("Invalid value '%s' for force. ") % force
@@ -195,13 +205,18 @@ class SnapshotsController(wsgi.Controller):
         update_dict = {}
 
         valid_update_keys = (
-            'display_name',
+            'name',
             'display_description',
         )
 
         for key in valid_update_keys:
             if key in snapshot:
                 update_dict[key] = snapshot[key]
+
+        # NOTE(thingee): v2 API allows name instead of display_name
+        if 'name' in update_dict:
+            update_dict['display_name'] = update_dict['name']
+            del update_dict['name']
 
         try:
             snapshot = self.volume_api.get_snapshot(context, id)
