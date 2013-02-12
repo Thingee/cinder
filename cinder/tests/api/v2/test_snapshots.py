@@ -87,11 +87,12 @@ class SnapshotApiTest(test.TestCase):
     def test_snapshot_create(self):
         self.stubs.Set(volume.api.API, "create_snapshot", stub_snapshot_create)
         self.stubs.Set(volume.api.API, 'get', stubs.stub_volume_get)
+        snapshot_description = 'Snapshot Test Desc'
         snapshot = {
             "volume_id": '12',
             "force": False,
             "display_name": "Snapshot Test Name",
-            "display_description": "Snapshot Test Desc"
+            "description": snapshot_description
         }
         body = dict(snapshot=snapshot)
         req = fakes.HTTPRequest.blank('/v2/snapshots')
@@ -100,18 +101,19 @@ class SnapshotApiTest(test.TestCase):
         self.assertTrue('snapshot' in resp_dict)
         self.assertEqual(resp_dict['snapshot']['display_name'],
                          snapshot['display_name'])
-        self.assertEqual(resp_dict['snapshot']['display_description'],
-                         snapshot['display_description'])
+        self.assertEqual(resp_dict['snapshot']['description'],
+                         snapshot_description)
 
     def test_snapshot_create_force(self):
         self.stubs.Set(volume.api.API, "create_snapshot_force",
                        stub_snapshot_create)
         self.stubs.Set(volume.api.API, 'get', stubs.stub_volume_get)
+        snapshot_description = 'Snapshot Test Desc'
         snapshot = {
             "volume_id": '12',
             "force": True,
             "display_name": "Snapshot Test Name",
-            "display_description": "Snapshot Test Desc"
+            "description": snapshot_description
         }
         body = dict(snapshot=snapshot)
         req = fakes.HTTPRequest.blank('/v2/snapshots')
@@ -120,14 +122,14 @@ class SnapshotApiTest(test.TestCase):
         self.assertTrue('snapshot' in resp_dict)
         self.assertEqual(resp_dict['snapshot']['display_name'],
                          snapshot['display_name'])
-        self.assertEqual(resp_dict['snapshot']['display_description'],
-                         snapshot['display_description'])
+        self.assertEqual(resp_dict['snapshot']['description'],
+                         snapshot_description)
 
         snapshot = {
             "volume_id": "12",
             "force": "**&&^^%%$$##@@",
             "display_name": "Snapshot Test Name",
-            "display_description": "Snapshot Test Desc"
+            "description": "Snapshot Test Desc"
         }
         body = dict(snapshot=snapshot)
         req = fakes.HTTPRequest.blank('/v2/snapshots')
@@ -154,7 +156,7 @@ class SnapshotApiTest(test.TestCase):
                 'size': 100,
                 'created_at': None,
                 'display_name': 'Updated Test Name',
-                'display_description': 'Default description',
+                'description': 'Default description',
             }
         }
         self.assertEquals(expected, res_dict)
@@ -343,7 +345,7 @@ class SnapshotSerializerTest(test.TestCase):
         self.assertEqual(tree.tag, 'snapshot')
 
         for attr in ('id', 'status', 'size', 'created_at',
-                     'display_name', 'display_description', 'volume_id'):
+                     'display_name', 'description', 'volume_id'):
             self.assertEqual(str(snap[attr]), tree.get(attr))
 
     def test_snapshot_show_create_serializer(self):
@@ -354,7 +356,7 @@ class SnapshotSerializerTest(test.TestCase):
             size=1024,
             created_at=datetime.datetime.now(),
             display_name='snap_name',
-            display_description='snap_desc',
+            description='snap_desc',
             volume_id='vol_id',
         )
         text = serializer.serialize(dict(snapshot=raw_snapshot))
@@ -373,7 +375,7 @@ class SnapshotSerializerTest(test.TestCase):
                 size=1024,
                 created_at=datetime.datetime.now(),
                 display_name='snap1_name',
-                display_description='snap1_desc',
+                description='snap1_desc',
                 volume_id='vol1_id',
             ),
             dict(
@@ -382,7 +384,7 @@ class SnapshotSerializerTest(test.TestCase):
                 size=1024,
                 created_at=datetime.datetime.now(),
                 display_name='snap2_name',
-                display_description='snap2_desc',
+                description='snap2_desc',
                 volume_id='vol2_id',
             )
         ]

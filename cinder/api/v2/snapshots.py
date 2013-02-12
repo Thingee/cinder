@@ -51,7 +51,7 @@ def _translate_snapshot_summary_view(context, snapshot):
     d['id'] = snapshot['id']
     d['created_at'] = snapshot['created_at']
     d['display_name'] = snapshot['display_name']
-    d['display_description'] = snapshot['display_description']
+    d['description'] = snapshot['display_description']
     d['volume_id'] = snapshot['volume_id']
     d['status'] = snapshot['status']
     d['size'] = snapshot['volume_size']
@@ -65,7 +65,7 @@ def make_snapshot(elem):
     elem.set('size')
     elem.set('created_at')
     elem.set('display_name')
-    elem.set('display_description')
+    elem.set('description')
     elem.set('volume_id')
 
 
@@ -168,13 +168,13 @@ class SnapshotsController(wsgi.Controller):
                 context,
                 volume,
                 snapshot.get('display_name'),
-                snapshot.get('display_description'))
+                snapshot.get('description'))
         else:
             new_snapshot = self.volume_api.create_snapshot(
                 context,
                 volume,
                 snapshot.get('display_name'),
-                snapshot.get('display_description'))
+                snapshot.get('description'))
 
         retval = _translate_snapshot_detail_view(context, new_snapshot)
 
@@ -196,8 +196,14 @@ class SnapshotsController(wsgi.Controller):
 
         valid_update_keys = (
             'display_name',
-            'display_description',
+            'description',
         )
+
+        # NOTE(thingee): v2 API allows description instead of
+        # display_description
+        if 'description' in snapshot:
+            snapshot['display_description'] = snapshot['description']
+            del snapshot['description']
 
         for key in valid_update_keys:
             if key in snapshot:
