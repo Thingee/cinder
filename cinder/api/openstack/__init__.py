@@ -22,6 +22,7 @@ WSGI middleware for OpenStack API controllers.
 
 import routes
 
+from cinder.api.middleware import fault
 from cinder.api.openstack import wsgi
 from cinder.openstack.common import log as logging
 from cinder import utils
@@ -122,3 +123,10 @@ class APIRouter(base_wsgi.Router):
 
     def _setup_routes(self, mapper, ext_mgr):
         raise NotImplementedError
+
+
+class FaultWrapper(fault.FaultWrapper):
+    def __init__(self, application):
+        LOG.warn('cinder.api.openstack:FaultWrapper is deprecated. Please use '
+                 'cinder.api.middleware.fault:FaultWrapper instead.')
+        super(FaultWrapper, self).__init__(application)
