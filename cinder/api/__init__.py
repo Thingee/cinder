@@ -16,17 +16,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from oslo.config import cfg
-import paste.urlmap
 
+API_SERVICE_OPTS = [
+    cfg.IntOpt('port',
+               default=8776,
+               help='The port for the Cinder API server',
+               ),
+    cfg.StrOpt('host',
+               default='0.0.0.0',
+               help='The listen IP for the Cinder API server',
+               ),
+]
 
 CONF = cfg.CONF
-
-
-def root_app_factory(loader, global_conf, **local_conf):
-    if not CONF.enable_v1_api:
-        del local_conf['/v1']
-    if not CONF.enable_v2_api:
-        del local_conf['/v2']
-    return paste.urlmap.urlmap_factory(loader, global_conf, **local_conf)
+opt_group = cfg.OptGroup(name='api',
+                         title='Options for the cinder-api service')
+CONF.register_group(opt_group)
+CONF.register_opts(API_SERVICE_OPTS, opt_group)

@@ -28,7 +28,9 @@ eventlet.monkey_patch()
 
 import os
 import sys
+import wsgiref
 
+from oslo.config import cfg
 
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
@@ -39,6 +41,7 @@ if os.path.exists(os.path.join(possible_topdir, "cinder", "__init__.py")):
 from cinder.openstack.common import gettextutils
 gettextutils.install('cinder')
 
+from cinder.api import app
 from cinder import flags
 from cinder.openstack.common import log as logging
 from cinder import service
@@ -47,7 +50,12 @@ from cinder import utils
 if __name__ == '__main__':
     flags.parse_args(sys.argv)
     logging.setup("cinder")
+
     utils.monkey_patch()
-    server = service.WSGIService('osapi_volume')
+
+    root = app.VersionSelectorApplication()
+
+    host, port = cfg.CONF.api.host, cfg.CONF.api.port
+    server = wsgiref.simple_server.make_server(host, port, root)
     service.serve(server)
     service.wait()
