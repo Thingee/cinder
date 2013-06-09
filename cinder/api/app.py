@@ -75,9 +75,7 @@ class VersionSelectorApplication(object):
     def __init__(self):
         pc = get_pecan_config()
         pc.app.enable_acl = (CONF.auth_strategy == 'keystone')
-        setup_app(pecan_config=pc)
+        self.app = setup_app(pecan_config=pc)
 
     def __call__(self, environ, start_response):
-        if environ['PATH_INFO'].startswith('/v1/'):
-            return self.v1(environ, start_response)
-        return self.v2(environ, start_response)
+        return self.app(environ, start_response)

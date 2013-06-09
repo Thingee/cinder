@@ -14,9 +14,54 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
+import pecan
 from pecan import rest
+from wsme import types as wtypes
+import wsmeext.pecan as wsme_pecan
+
+from cinder import volume
+
+
+class _Base(wtypes.Base):
+
+    @classmethod
+    def from_db_model(cls, m):
+        return cls(**m)
+
+
+class Volume(_Base):
+    id = wtypes.text
+    name = wtypes.text
+    ec2_id = int
+    user_id = wtypes.text
+    project_id = wtypes.text
+    snapshot_id = wtypes.text
+    host = wtypes.text
+    size = int
+    availability_zone = wtypes.text
+    instance_uuid = wtypes.text
+    mountpoint = wtypes.text
+    attach_time = wtypes.text
+    status = wtypes.text
+    attach_status = wtypes.text
+    scheduled_at = datetime.datetime
+    launched_at = datetime.datetime
+    terminated_at = datetime.datetime
+    display_name = wtypes.text
+    display_description = wtypes.text
+    provider_location = wtypes.text
+    provider_auth = wtypes.text
+    volume_type_id = wtypes.text
+    source_volid = wtypes.text
 
 
 class VolumesController(rest.RestController):
-    def get_one(self, volume_id):
-        return volume_id
+    def __init__(self):
+        self.volume_api = volume.API()
+
+    @wsme_pecan.wsexpose(Volume)
+    def get_one(self, id):
+        vol = self.volume_api.get(pecan.request.context, id)
+        return Volume.from_db_model(vol)

@@ -24,4 +24,5 @@ sqlalchemy-migrate>=0.7
 stevedore>=0.9
 suds>=0.4
 webob>=1.0.8
+wsme>=0.5b2
 wsgiref>=0.1.2

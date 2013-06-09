@@ -26,9 +26,10 @@
 import eventlet
 eventlet.monkey_patch()
 
+import logging as std_logging
 import os
 import sys
-import wsgiref
+from wsgiref import simple_server
 
 from oslo.config import cfg
 
@@ -44,18 +45,28 @@ gettextutils.install('cinder')
 from cinder.api import app
 from cinder import flags
 from cinder.openstack.common import log as logging
-from cinder import service
-from cinder import utils
 
 if __name__ == '__main__':
     flags.parse_args(sys.argv)
     logging.setup("cinder")
 
-    utils.monkey_patch()
-
     root = app.VersionSelectorApplication()
 
     host, port = cfg.CONF.api.host, cfg.CONF.api.port
-    server = wsgiref.simple_server.make_server(host, port, root)
-    service.serve(server)
-    service.wait()
+    server = simple_server.make_server(host, port, root)
+
+    LOG = logging.getLogger(__name__)
+    LOG.info('Starting server in PID %s' % os.getpid())
+    LOG.info("Configuration:")
+    cfg.CONF.log_opt_values(LOG, std_logging.INFO)
+
+    if host == '0.0.0.0':
+        LOG.info('serving on 0.0.0.0:%s, view at http://127.0.0.1:%s' %
+                 (port, port))
+    else:
+        LOG.info("serving on http://%s:%s" % (host, port))
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass

@@ -14,10 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from pecan.rest import RestController
-
-from cinder.api.controllers.v1 import volumes
+from cinder.api.controllers import v1
 
 
-class V1Controller(RestController):
-    volumes = volumes.VolumesController()
+class RootController(object):
+    v1 = v1.V1Controller()
