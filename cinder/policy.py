@@ -17,6 +17,8 @@
 
 """Policy Engine For Cinder"""
 
+import functools
+
 from oslo.config import cfg
 
 from cinder import exception
@@ -103,3 +105,27 @@ def check_is_admin(roles):
     credentials = {'roles': roles}
 
     return policy.enforce(match_list, target, credentials)
+
+
+def wrap_check_policy(func):
+    """Check policy corresponding to the wrapped methods prior to execution
+
+    This decorator requires the first 3 args of the wrapped function
+    to be (self, context, volume)
+    """
+    @functools.wraps(func)
+    def wrapped(self, context, target_obj, *args, **kwargs):
+        check_policy(context, func.__name__, target_obj)
+        return func(self, context, target_obj, *args, **kwargs)
+
+    return wrapped
+
+
+def check_policy(context, action, target_obj=None):
+    target = {
+        'project_id': context.project_id,
+        'user_id': context.user_id,
+    }
+    target.update(target_obj or {})
+    _action = 'volume:%s' % action
+    enforce(context, _action, target)

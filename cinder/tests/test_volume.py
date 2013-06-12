@@ -37,11 +37,12 @@ from cinder.openstack.common import importutils
 from cinder.openstack.common.notifier import api as notifier_api
 from cinder.openstack.common.notifier import test_notifier
 from cinder.openstack.common import rpc
-import cinder.policy
+from cinder import policy
 from cinder import quota
 from cinder import test
 from cinder.tests import fake_flags
 from cinder.tests.image import fake as fake_image
+from cinder.volume import api
 from cinder.volume import configuration as conf
 from cinder.volume import driver
 
@@ -220,7 +221,7 @@ class VolumeTestCase(test.TestCase):
 
     def test_create_volume_with_invalid_metadata(self):
         """Test volume create with too much metadata fails."""
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         test_meta = {'fake_key': 'fake_value' * 256}
         self.assertRaises(exception.InvalidVolumeMetadataSize,
                           volume_api.create,
@@ -248,7 +249,7 @@ class VolumeTestCase(test.TestCase):
         self.stubs.Set(QUOTAS, "commit", fake_commit)
         self.stubs.Set(QUOTAS, "rollback", fake_rollback)
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         # Create volume with default volume type while default
         # volume type doesn't exist, volume_type_id should be NULL
@@ -330,7 +331,7 @@ class VolumeTestCase(test.TestCase):
 
     def test_create_volume_from_snapshot_fail_bad_size(self):
         """Test volume can't be created from snapshot with bad volume size."""
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         snapshot = dict(id=1234,
                         status='available',
                         volume_size=10)
@@ -344,7 +345,7 @@ class VolumeTestCase(test.TestCase):
 
     def test_create_volume_with_invalid_exclusive_options(self):
         """Test volume create with multiple exclusive options fails."""
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         self.assertRaises(exception.InvalidInput,
                           volume_api.create,
                           self.context,
@@ -526,7 +527,7 @@ class VolumeTestCase(test.TestCase):
         volume['status'] = 'in-use'
         volume['host'] = 'fakehost'
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         # 'in-use' status raises InvalidVolume
         self.assertRaises(exception.InvalidVolume,
@@ -545,7 +546,7 @@ class VolumeTestCase(test.TestCase):
         volume['status'] = 'error_deleting'
         volume['host'] = 'fakehost'
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         # 'error_deleting' volumes can't be deleted
         self.assertRaises(exception.InvalidVolume,
@@ -571,7 +572,7 @@ class VolumeTestCase(test.TestCase):
         volume['attach_status'] = 'attached'
         volume['host'] = 'fakehost'
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         self.assertRaises(exception.VolumeAttached,
                           volume_api.delete,
@@ -594,7 +595,7 @@ class VolumeTestCase(test.TestCase):
         volume['status'] = 'available'
         volume['host'] = 'fakehost'
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         self.assertRaises(exception.InvalidVolume,
                           volume_api.delete,
@@ -612,7 +613,7 @@ class VolumeTestCase(test.TestCase):
         snapshot = db.snapshot_get(context.get_admin_context(),
                                    snapshot_id)
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         snapshot['status'] = 'badstatus'
         self.assertRaises(exception.InvalidSnapshot,
@@ -637,7 +638,7 @@ class VolumeTestCase(test.TestCase):
         db.volume_attached(self.context, volume['id'], instance_uuid,
                            '/dev/sda1')
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         volume = volume_api.get(self.context, volume['id'])
         self.assertRaises(exception.InvalidVolume,
                           volume_api.create_snapshot,
@@ -883,7 +884,7 @@ class VolumeTestCase(test.TestCase):
 
         try:
             volume_id = None
-            volume_api = cinder.volume.api.API(
+            volume_api = api.API(
                 image_service=_FakeImageService())
             volume = volume_api.create(self.context, 2, 'name', 'description',
                                        image_id=1)
@@ -907,7 +908,7 @@ class VolumeTestCase(test.TestCase):
 
         image_id = '70a599e0-31e7-49b7-b260-868f441e862b'
 
-        volume_api = cinder.volume.api.API(image_service=_FakeImageService())
+        volume_api = api.API(image_service=_FakeImageService())
 
         self.assertRaises(exception.InvalidInput,
                           volume_api.create,
@@ -928,7 +929,7 @@ class VolumeTestCase(test.TestCase):
 
         image_id = '70a599e0-31e7-49b7-b260-868f441e862b'
 
-        volume_api = cinder.volume.api.API(image_service=_FakeImageService())
+        volume_api = api.API(image_service=_FakeImageService())
 
         self.assertRaises(exception.InvalidInput,
                           volume_api.create,
@@ -949,7 +950,7 @@ class VolumeTestCase(test.TestCase):
         self.stubs.Set(QUOTAS, "commit", fake_commit)
         self.stubs.Set(QUOTAS, "rollback", fake_rollback)
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         volume = volume_api.create(self.context,
                                    size,
@@ -979,7 +980,7 @@ class VolumeTestCase(test.TestCase):
         self.stubs.Set(QUOTAS, "commit", fake_commit)
         self.stubs.Set(QUOTAS, "rollback", fake_rollback)
 
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
 
         self.assertRaises(exception.InvalidInput,
                           volume_api.create,
@@ -991,7 +992,7 @@ class VolumeTestCase(test.TestCase):
     def test_begin_roll_detaching_volume(self):
         """Test begin_detaching and roll_detaching functions."""
         volume = self._create_volume()
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         volume_api.begin_detaching(self.context, volume)
         volume = db.volume_get(self.context, volume['id'])
         self.assertEqual(volume['status'], "detaching")
@@ -1003,7 +1004,7 @@ class VolumeTestCase(test.TestCase):
         # create a raw vol
         volume = self._create_volume()
         # use volume.api to update name
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         update_dict = {'display_name': 'test update name'}
         volume_api.update(self.context, volume, update_dict)
         # read changes from db
@@ -1016,7 +1017,7 @@ class VolumeTestCase(test.TestCase):
         snapshot = self._create_snapshot(volume['id'])
         self.assertEquals(snapshot['display_name'], None)
         # use volume.api to update name
-        volume_api = cinder.volume.api.API()
+        volume_api = api.API()
         update_dict = {'display_name': 'test update name'}
         volume_api.update_snapshot(self.context, snapshot, update_dict)
         # read changes from db
@@ -1317,35 +1318,35 @@ class VolumePolicyTestCase(test.TestCase):
     def setUp(self):
         super(VolumePolicyTestCase, self).setUp()
 
-        cinder.policy.reset()
-        cinder.policy.init()
+        policy.reset()
+        policy.init()
 
         self.context = context.get_admin_context()
 
     def tearDown(self):
         super(VolumePolicyTestCase, self).tearDown()
-        cinder.policy.reset()
+        policy.reset()
 
     def _set_rules(self, rules):
         cinder.common.policy.set_brain(cinder.common.policy.Brain(rules))
 
     def test_check_policy(self):
-        self.mox.StubOutWithMock(cinder.policy, 'enforce')
+        self.mox.StubOutWithMock(policy, 'enforce')
         target = {
             'project_id': self.context.project_id,
             'user_id': self.context.user_id,
         }
-        cinder.policy.enforce(self.context, 'volume:attach', target)
+        policy.enforce(self.context, 'volume:attach', target)
         self.mox.ReplayAll()
-        cinder.volume.api.check_policy(self.context, 'attach')
+        policy.check_policy(self.context, 'attach')
 
     def test_check_policy_with_target(self):
-        self.mox.StubOutWithMock(cinder.policy, 'enforce')
+        self.mox.StubOutWithMock(policy, 'enforce')
         target = {
             'project_id': self.context.project_id,
             'user_id': self.context.user_id,
             'id': 2,
         }
-        cinder.policy.enforce(self.context, 'volume:attach', target)
+        policy.enforce(self.context, 'volume:attach', target)
         self.mox.ReplayAll()
-        cinder.volume.api.check_policy(self.context, 'attach', {'id': 2})
+        policy.check_policy(self.context, 'attach', {'id': 2})

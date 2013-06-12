@@ -20,8 +20,6 @@
 Handles all requests relating to volumes.
 """
 
-import functools
-
 from oslo.config import cfg
 
 from cinder import context
@@ -32,7 +30,7 @@ from cinder.image import glance
 from cinder.openstack.common import excutils
 from cinder.openstack.common import log as logging
 from cinder.openstack.common import timeutils
-import cinder.policy
+from cinder import policy
 from cinder import quota
 from cinder.scheduler import rpcapi as scheduler_rpcapi
 from cinder.volume import rpcapi as volume_rpcapi
@@ -50,30 +48,6 @@ flags.DECLARE('storage_availability_zone', 'cinder.volume.manager')
 LOG = logging.getLogger(__name__)
 GB = 1048576 * 1024
 QUOTAS = quota.QUOTAS
-
-
-def wrap_check_policy(func):
-    """Check policy corresponding to the wrapped methods prior to execution
-
-    This decorator requires the first 3 args of the wrapped function
-    to be (self, context, volume)
-    """
-    @functools.wraps(func)
-    def wrapped(self, context, target_obj, *args, **kwargs):
-        check_policy(context, func.__name__, target_obj)
-        return func(self, context, target_obj, *args, **kwargs)
-
-    return wrapped
-
-
-def check_policy(context, action, target_obj=None):
-    target = {
-        'project_id': context.project_id,
-        'user_id': context.user_id,
-    }
-    target.update(target_obj or {})
-    _action = 'volume:%s' % action
-    cinder.policy.enforce(context, _action, target)
 
 
 class API(base.Base):
@@ -100,7 +74,7 @@ class API(base.Base):
                      "or source volume"))
             raise exception.InvalidInput(reason=msg)
 
-        check_policy(context, 'create')
+        policy.check_policy(context, 'create')
         if snapshot is not None:
             if snapshot['status'] != "available":
                 msg = _("status must be available")
@@ -314,7 +288,7 @@ class API(base.Base):
             LOG.warn(msg)
             raise exception.InvalidInput(reason=msg)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def delete(self, context, volume, force=False):
         if context.is_admin and context.project_id != volume['project_id']:
             project_id = volume['project_id']
@@ -358,7 +332,7 @@ class API(base.Base):
 
         self.volume_rpcapi.delete_volume(context, volume)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def update(self, context, volume, fields):
         self.db.volume_update(context, volume['id'], fields)
 
@@ -366,7 +340,7 @@ class API(base.Base):
         rv = self.db.volume_get(context, volume_id)
         glance_meta = rv.get('volume_glance_metadata', None)
         volume = dict(rv.iteritems())
-        check_policy(context, 'get', volume)
+        policy.check_policy(context, 'get', volume)
 
         # NOTE(jdg): As per bug 1115629 iteritems doesn't pick
         # up the glance_meta dependency, add it explicitly if
@@ -378,7 +352,7 @@ class API(base.Base):
 
     def get_all(self, context, marker=None, limit=None, sort_key='created_at',
                 sort_dir='desc', filters={}):
-        check_policy(context, 'get_all')
+        policy.check_policy(context, 'get_all')
 
         try:
             if limit is not None:
@@ -437,17 +411,17 @@ class API(base.Base):
         return volumes
 
     def get_snapshot(self, context, snapshot_id):
-        check_policy(context, 'get_snapshot')
+        policy.check_policy(context, 'get_snapshot')
         rv = self.db.snapshot_get(context, snapshot_id)
         return dict(rv.iteritems())
 
     def get_volume(self, context, volume_id):
-        check_policy(context, 'get_volume')
+        policy.check_policy(context, 'get_volume')
         rv = self.db.volume_get(context, volume_id)
         return dict(rv.iteritems())
 
     def get_all_snapshots(self, context, search_opts=None):
-        check_policy(context, 'get_all_snapshots')
+        policy.check_policy(context, 'get_all_snapshots')
 
         search_opts = search_opts or {}
 
@@ -473,7 +447,7 @@ class API(base.Base):
             snapshots = results
         return snapshots
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def check_attach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
@@ -483,14 +457,14 @@ class API(base.Base):
             msg = _("already attached")
             raise exception.InvalidVolume(reason=msg)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def check_detach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
             msg = _("already detached")
             raise exception.InvalidVolume(reason=msg)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def reserve_volume(self, context, volume):
         #NOTE(jdg): check for Race condition bug 1096983
         #explicitly get updated ref and check
@@ -502,38 +476,38 @@ class API(base.Base):
             LOG.error(msg)
             raise exception.InvalidVolume(reason=msg)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def unreserve_volume(self, context, volume):
         if volume['status'] == "attaching":
             self.update(context, volume, {"status": "available"})
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def begin_detaching(self, context, volume):
         self.update(context, volume, {"status": "detaching"})
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def roll_detaching(self, context, volume):
         if volume['status'] == "detaching":
             self.update(context, volume, {"status": "in-use"})
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def attach(self, context, volume, instance_uuid, mountpoint):
         return self.volume_rpcapi.attach_volume(context,
                                                 volume,
                                                 instance_uuid,
                                                 mountpoint)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def detach(self, context, volume):
         return self.volume_rpcapi.detach_volume(context, volume)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def initialize_connection(self, context, volume, connector):
         return self.volume_rpcapi.initialize_connection(context,
                                                         volume,
                                                         connector)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def terminate_connection(self, context, volume, connector, force=False):
         self.unreserve_volume(context, volume)
         return self.volume_rpcapi.terminate_connection(context,
@@ -541,7 +515,7 @@ class API(base.Base):
                                                        connector,
                                                        force)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def accept_transfer(self, context, volume):
         return self.volume_rpcapi.accept_transfer(context,
                                                   volume)
@@ -549,7 +523,7 @@ class API(base.Base):
     def _create_snapshot(self, context,
                          volume, name, description,
                          force=False, metadata=None):
-        check_policy(context, 'create_snapshot', volume)
+        policy.check_policy(context, 'create_snapshot', volume)
 
         if ((not force) and (volume['status'] != "available")):
             msg = _("must be available")
@@ -625,7 +599,7 @@ class API(base.Base):
         return self._create_snapshot(context, volume, name, description,
                                      True, metadata)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def delete_snapshot(self, context, snapshot, force=False):
         if not force and snapshot['status'] not in ["available", "error"]:
             msg = _("Volume Snapshot status must be available or error")
@@ -635,17 +609,17 @@ class API(base.Base):
         volume = self.db.volume_get(context, snapshot['volume_id'])
         self.volume_rpcapi.delete_snapshot(context, snapshot, volume['host'])
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def update_snapshot(self, context, snapshot, fields):
         self.db.snapshot_update(context, snapshot['id'], fields)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def get_volume_metadata(self, context, volume):
         """Get all metadata associated with a volume."""
         rv = self.db.volume_metadata_get(context, volume['id'])
         return dict(rv.iteritems())
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def delete_volume_metadata(self, context, volume, key):
         """Delete the given metadata item from a volume."""
         self.db.volume_metadata_delete(context, volume['id'], key)
@@ -668,7 +642,7 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise exception.InvalidVolumeMetadataSize(reason=msg)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def update_volume_metadata(self, context, volume, metadata, delete=False):
         """Updates or creates volume metadata.
 
@@ -739,7 +713,7 @@ class API(base.Base):
     def get_snapshot_metadata_value(self, snapshot, key):
         pass
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def get_volume_image_metadata(self, context, volume):
         db_data = self.db.volume_glance_metadata_get(context, volume['id'])
         return dict(
@@ -755,7 +729,7 @@ class API(base.Base):
             msg = _('Volume status is in-use.')
             raise exception.InvalidVolume(reason=msg)
 
-    @wrap_check_policy
+    @policy.wrap_check_policy
     def copy_volume_to_image(self, context, volume, metadata, force):
         """Create a new image from the specified volume."""
         self._check_volume_availability(context, volume, force)
