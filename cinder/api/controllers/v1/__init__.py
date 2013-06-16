@@ -14,10 +14,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from pecan.rest import RestController
+import pecan
 
 from cinder.api.controllers.v1 import volumes
 
 
-class V1Controller(RestController):
+class RouterController(object):
     volumes = volumes.VolumesController()
+
+    def __init__(self, tenant_id):
+        self.tenant_id = tenant_id
+
+
+class V1Controller(object):
+    @pecan.expose()
+    def _lookup(self, tenant_id, *remainder):
+        return RouterController(tenant_id), remainder
