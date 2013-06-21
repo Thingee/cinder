@@ -14,12 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneclient.middleware import auth_token
 from oslo.config import cfg
 import pecan
 
 from cinder.api import config as api_config
 from cinder.api import hooks
-from cinder.api import middleware
+
+
+OPT_GROUP_NAME = 'keystone_authtoken'
 
 
 auth_opts = [
@@ -38,6 +41,15 @@ CONF = cfg.CONF
 CONF.register_opts(auth_opts)
 
 
+def register_opts(conf):
+    """Register keystoneclient middleware options."""
+    conf.register_opts(auth_token.opts,
+                       group=OPT_GROUP_NAME)
+    auth_token.CONF = conf
+
+register_opts(cfg.CONF)
+
+
 def get_pecan_config():
     # Set up the pecan configuration
     filename = api_config.__file__.replace('.pyc', '.py')
@@ -45,8 +57,12 @@ def get_pecan_config():
 
 
 def setup_app(pecan_config=None, extra_hooks=None):
-    # FIXME: Replace DBHook with a hooks.TransactionHook
-    app_hooks = [hooks.ConfigHook()]
+    def add_middleware(app):
+        return auth_token.AuthProtocol(app,
+                                       conf=dict(cfg.CONF.get(OPT_GROUP_NAME)))
+
+    app_hooks = [hooks.ConfigHook(),
+                 hooks.KeystoneContextHook()]
 
     if extra_hooks:
         app_hooks.extend(extra_hooks)
@@ -62,11 +78,9 @@ def setup_app(pecan_config=None, extra_hooks=None):
         template_path=pecan_config.app.template_path,
         debug=CONF.debug,
         force_canonical=getattr(pecan_config.app, 'force_canonical', True),
+        wrap_app=add_middleware,
         hooks=app_hooks,
     )
-
-    # TODO: add middleware crap
-    # wrap_app=middleware.ParsableErrorMiddleware,
 
     return app
 
