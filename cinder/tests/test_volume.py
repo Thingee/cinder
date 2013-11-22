@@ -21,6 +21,7 @@ Tests for Volume Code.
 """
 
 import datetime
+import mock
 import os
 import re
 import shutil
@@ -871,6 +872,48 @@ class VolumeTestCase(BaseVolumeTestCase):
         self.assertEqual(len(admin_metadata), 1)
         self.assertEqual(admin_metadata[0]['key'], 'readonly')
         self.assertEqual(admin_metadata[0]['value'], 'True')
+
+    @mock.patch.object(db, 'volume_get')
+    @mock.patch.object(cinder.volume.api.API, 'update')
+    def test_reserve_volume_success(self, volume_get, volume_update):
+        fake_volume = {
+            'id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa',
+            'status': 'available'
+        }
+
+        volume_get.return_value = fake_volume
+        volume_update.return_value = fake_volume
+
+        self.assertIsNone(cinder.volume.api.API().reserve_volume(
+            self.context,
+            fake_volume,
+        ))
+
+    def test_reserve_volume_bad_status(self):
+        fake_volume = {
+            'id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa',
+            'status': 'in-use'
+        }
+
+        with mock.patch.object(db, 'volume_get',
+                               lambda *args: fake_volume):
+            self.assertRaises(exception.InvalidVolume,
+                              cinder.volume.api.API().reserve_volume,
+                              self.context,
+                              fake_volume)
+
+    def test_unreserve_volume_success(self):
+        fake_volume = {
+            'id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa',
+            'status': 'attaching'
+        }
+
+        with mock.patch.object(cinder.volume.api.API, 'update',
+                               lambda *args: fake_volume):
+            self.assertIsNone(cinder.volume.api.API().unreserve_volume(
+                self.context,
+                fake_volume
+            ))
 
     def test_concurrent_volumes_get_different_targets(self):
         """Ensure multiple concurrent volumes get different targets."""
