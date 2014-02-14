@@ -65,3 +65,27 @@ provided by a driver.
 total_capacity_gb, keywords can be provided instead. Please use 'unknown' if
 the array cannot report the value or 'infinite' if the array has no upper
 limit.
+
+Passing Certificate Test
+------------------------
+Every driver that is included with Cinder must successfully run and pass the
+existing OpenStack Tempest tests. While every commit in OpenStack goes through
+an automated gate test, we ask that since we won't have your backend device to
+test against, you run this certificate test yourself:
+
+https://github.com/openstack-dev/devstack/tree/master/driver_certs
+
+The certificate test is a wrapper around tempest that will run the relevant
+tests and show whether your driver will work properly. The test should be ran
+as is. You do not need to make modifications to the test. This is on the honor
+system and forging the results can have **serious consequences**.
+
+Copy the output of the tests to http://paste.openstack.org and include the link
+in a comment with your review. New drivers that do not include the results will
+not be merged.
+
+There are drivers that have been merged before these cert tests existed. They
+will be included with the Icehouse release and required to pass these tests by
+the Juno release, or they will be removed. Driver maintainers that have not
+provided their results to Cinder core before the Icehouse release cut off will
+not be a certified driver.
