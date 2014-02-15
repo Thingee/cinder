@@ -21,6 +21,20 @@ Cinder exposes an API to users to interact with different storage backend
 solutions. The following are standards across all drivers for Cinder services
 to properly interact with a driver.
 
+Contributing A New Driver
+-------------------------
+
+Please submit your [blue
+print](https://blueprints.launchpad.net/cinder/+addspec) by milestone 1.
+Exceptions for new driver blue prints may be accepted for milestone 2. Your
+code should be submitted and ready for review no later than milestone 2. If you
+submit new driver code late in milestone 2, it might be delayed to milestone 3
+or might not make the release due to gate congestion and priorities of other
+reviews. In other words, don't wait last minute to ensure your driver makes the
+release. There will be **no** exceptions made for driver blue prints or code
+submitted in milestone 3. Drivers submitted in milestone 3 will be delayed to
+the next release.
+
 Minimum Features
 ----------------
 
