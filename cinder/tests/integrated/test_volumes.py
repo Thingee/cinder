@@ -34,7 +34,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
     def _start_api_service(self):
         self.osapi = service.WSGIService("osapi_volume")
         self.osapi.start()
-        self.auth_url = 'http://%s:%s/v1' % (self.osapi.host, self.osapi.port)
+        self.auth_url = 'http://%s:%s/v2' % (self.osapi.host, self.osapi.port)
         LOG.warn(self.auth_url)
 
     def _get_flags(self):
