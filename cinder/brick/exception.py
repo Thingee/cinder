@@ -118,3 +118,11 @@ class ISCSITargetAttachFailed(BrickException):
 
 class ProtocolNotSupported(BrickException):
     message = _("Connect to volume via protocol %(protocol)s not supported.")
+
+
+class VhostTargetCreateFailed(BrickException):
+    message = _("Failed to create vhost target for volume %(volume_id)s.")
+
+
+class VhostTargetRemoveFailed(BrickException):
+    message = _("Failed to remove vhost target for volume %(volume_id)s.")

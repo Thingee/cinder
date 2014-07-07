@@ -32,6 +32,28 @@ class RtstoolImportError(RtstoolError):
     pass
 
 
+def create_vhost(name, backing_device):
+    rtsroot = None
+    try:
+        rtsroot = rtslib.root.RTSRoot()
+    except rtslib.utils.RTSLibError:
+        print(_('Ensure that configfs is mounted at /sys/kernel/config.'))
+        raise
+
+    for storage in rtsroot.storage_objects:
+        if storage.name == name:
+            lun = storage.attached_luns.next()
+            print(lun.parent_tpg.parent_target.wwn)
+            return
+
+    wwn = rtslib.utils.generate_wwn('naa')
+    storage = rtslib.IBlockStorageObject(name, dev=backing_device)
+    target = rtslib.Target(rtslib.FabricModule('vhost'), wwn, 'create')
+    portal = rtslib.TPG(target, 1, 'create')
+    rtslib.LUN(portal, 1, storage_object=storage)
+    print(wwn)
+
+
 def create(backing_device, name, userid, password, initiator_iqns=None):
     try:
         rtsroot = rtslib.root.RTSRoot()
