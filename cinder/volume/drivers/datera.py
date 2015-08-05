@@ -133,6 +133,13 @@ class DateraDriver(san.SanISCSIDriver):
                                                   _('Resource not ready.'))
 
     def _create_resource(self, resource, resource_type, body):
+        if resource_type == 'volumes':
+            type_id = resource.get('volume_type_id', None)
+            if type_id is not None:
+                qos = self._set_qos_presets(vref)
+                if qos:
+                    body.update(qos)
+
         result = self._issue_api_request(resource_type, 'post', body=body)
 
         if result['status'] == 'available':
@@ -298,6 +305,30 @@ class DateraDriver(san.SanISCSIDriver):
                               'check your username and password set in the '
                               'cinder.conf and start the cinder-volume'
                               'service again.'))
+
+    def _set_qos_by_volume_type(self, ctxt, type_id):
+        """Get extra_specs of a volume_type.
+        
+        This prefers qos_specs when setting QOS related policies. This is also
+        a copy from the SolidFire extra_specs extraction.
+        """
+        qos = {}
+        volume_type = volume_types.get_volume_type(ctxt, type_id)
+        qos_specs_id = volume_type.get('qos_specs_id')
+        specs = volume_type.get('extra_specs')
+
+        if qos_specs_id is not None:
+            kvs = qos_specs.get_qos_specs(ctxt, qos_specs_id)['specs']
+        else:
+            kvs = specs
+
+        for key, value in kvs.items():
+            if ':' in key:
+                fields = key.split(':')
+                key = fields[1]
+            if key in self.sf_qos_keys:
+                qos[key] = int(value)
+        return qos
 
     @_authenticated
     def _issue_api_request(self, resource_type, method='get', resource=None,
